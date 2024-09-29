@@ -1,70 +1,109 @@
-# Getting Started with Create React App
+Here's the complete draft for your README file based on the structure and content you provided.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+---
 
-## Available Scripts
+# Cloud Editor
 
-In the project directory, you can run:
+Cloud Editor is a real-time collaborative code editor built using the MERN stack and WebSocket technology (Socket.io). It allows multiple users to collaborate on code in real-time within shared rooms.
 
-### `npm start`
+## Features
+- **Real-time code collaboration** using WebSocket.
+- **Code Editor** with syntax highlighting and autocompletion powered by Codemirror.
+- **User Rooms**: Create or join rooms with a unique Room ID to collaborate with other users.
+- **Live Notifications**: Instant feedback through toast notifications.
+- **Simple UI**: Responsive and user-friendly interface.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Project Structure
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
+src
+├── components
+│   ├── Client.js          # Handles client-side user display logic
+│   ├── Editor.js          # Initializes Codemirror and syncs code changes
+├── pages
+│   ├── EditorPage.js      # Main page for the code editor, handles socket events
+│   ├── Home.js            # Landing page for creating and joining rooms
+├── Actions.js             # Contains socket event constants
+├── App.js                 # Main application component
+├── App.css                # Global styles
+├── index.js               # Entry point for the React app
+├── index.css              # Additional styles
+server.js                  # Handles the backend socket server
+socket.js                  # Initializes the socket connection
+.env                       # Environment variables for backend URL and configuration
+```
 
-### `npm test`
+## Dependencies
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The following dependencies are used in this project:
 
-### `npm run build`
+- `"codemirror": "^5.65.2"`
+- `"nodemon": "^3.1.7"`
+- `"react": "^18.3.1"`
+- `"react-avatar": "^5.0.3"`
+- `"react-dom": "^18.3.1"`
+- `"react-hot-toast": "^2.4.1"`
+- `"react-router-dom": "^6.26.2"`
+- `"react-scripts": "5.0.1"`
+- `"socket.io": "^4.8.0"`
+- `"socket.io-client": "^4.8.0"`
+- `"uuid": "^10.0.0"`
+- `"web-vitals": "^2.1.4"`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Environment Variables
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The application uses a `.env` file to store environment variables. Ensure the following variable is configured:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+REACT_APP_BACKEND_URL=<your-backend-url>
+```
 
-### `npm run eject`
+## Usage
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. **Home Page** (`Home.js`):
+   - Users can either create a new room by generating a unique Room ID or join an existing room by entering the Room ID and their username. Room navigation and handling are done via React Router and toast notifications.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. **Editor Page** (`EditorPage.js`):
+   - The page initializes WebSocket connections using `socket.js`, handles user connections/disconnections, and synchronizes code in real time between all users in a room. It includes an `Editor.js` component, where Codemirror is used to create the code editor.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+3. **Client Component** (`Client.js`):
+   - Displays user avatars and their usernames within the active room.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+4. **Editor Component** (`Editor.js`):
+   - This component integrates Codemirror, handles code changes, and emits events to synchronize code across connected clients.
 
-## Learn More
+5. **Socket Initialization** (`socket.js`):
+   - Establishes WebSocket connections with a backend using the URL provided in the `.env` file.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## How to Run
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. Clone the repository:
+   ```bash
+   git clone <repo-url>
+   cd cloud-editor
+   ```
 
-### Code Splitting
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+3. Set up the environment variables in a `.env` file:
+   ```bash
+   REACT_APP_BACKEND_URL=[<your-backend-url>](https://code-editor-f145.onrender.com/)
+   ```
 
-### Analyzing the Bundle Size
+4. Run the application:
+   ```bash
+   npm start
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+   The app will run on [http://localhost:3000](http://localhost:3000) by default.
 
-### Making a Progressive Web App
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+This project is licensed under the MIT License.
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Let me know if you need any adjustments!
