@@ -104,6 +104,18 @@ function EditorPage() {
   return (
     <div className="mainWrap">
       <div className="aside">
+        {/* Floating Circles */}
+        <ul className="circle">
+          {Array.from({ length: 20 }).map((_, idx) => (
+            <li
+              key={idx}
+              style={{
+                "--i": Math.random() * 10 + 1, // For vertical position and size
+                "--j": Math.random() * 7 + 1, // Random horizontal position (adjusted for containment)
+              }}
+            ></li>
+          ))}
+        </ul>
         <div className="asideInner">
           <div className="logo">
             <img className="logoImage" src="/code-sync.png" alt="logo" />
@@ -120,11 +132,12 @@ function EditorPage() {
         </div>
         <button className="btn copyBtn" onClick={copyRoomId}>
           Copy ROOM ID
-        </button> 
+        </button>
         <button className="btn leaveBtn" onClick={leaveRoom}>
           Leave
         </button>
       </div>
+
       <div className="editorWrap">
         {/* Editor component calling */}
         <Editor

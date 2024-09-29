@@ -1,3 +1,7 @@
+.body {
+  overflow: hidden;
+}
+
 .homePageWrapper {
   display: flex;
   align-items: center;
@@ -19,91 +23,97 @@ footer {
   bottom: 0;
 }
 
-footer a{
-  color:#4aee88;
+footer a {
+  color: #4aee88;
 }
 
-.inputGroup{
-  display:flex;
+.inputGroup {
+  display: flex;
   flex-direction: column;
 }
 
-.mainLabel{
+.mainLabel {
   margin-bottom: 20px;
   margin-top: 0px;
 }
 
-.homePagelogo{
-  height:80px;
+.homePagelogo {
+  height: 80px;
   margin-bottom: 30px;
 }
 
-.inputBox{
-  padding:10px;
-  margin-bottom:10px;
-  outline:none;
+.inputBox {
+  padding: 10px;
+  margin-bottom: 10px;
+  outline: none;
   border: none;
   border-radius: 5px;
   font-size: 16px;
   font-weight: bold;
 }
 
-.btn{
-  border:none;
-  padding:10px;
-  border-radius:5px;
-  cursor:pointer;
-  font-size:16px;
+.btn {
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
   font-weight: bold;
-  transition:all 0.3s ease;
+  z-index:1;
+  transition: all 0.3s ease;
 }
+
 .joinBtn,
-.leaveBtn{
-  background:#4aed88;
-  width:100px;
-  margin-left:auto;
-  margin-bottom:10px;
+.leaveBtn {
+  background: #4aed88;
+  width: 100px;
+  margin-left: auto;
+  margin-bottom: 10px;
   font-weight: bold;
 }
+
 .joinBtn:hover,
-.leaveBtn:hover{
-  background:#2b824c;
+.leaveBtn:hover {
+  background: #2b824c;
 }
 
-.createInfo{
-  margin:0 auto;
+.createInfo {
+  margin: 0 auto;
 }
 
-.createNewBtn{
-  all:unset;
-  color:#4aed88;
-  transition:all 0.3s ease;
+.createNewBtn {
+  all: unset;
+  color: #4aed88;
+  transition: all 0.3s ease;
   background-color: transparent;
-  cursor:pointer;
+  cursor: pointer;
 }
-.createNewBtn:hover , footer a:hover{
-  color:#2b824c;
+
+.createNewBtn:hover,
+footer a:hover {
+  color: #2b824c;
 }
 
 
-a{
+a {
   text-decoration: none;
 }
 
 .mainWrap {
   display: grid;
   grid-template-columns: 240px 1fr;
-  height:100vh;
+  height: 100vh;
 }
 
 .aside {
-  background: #1c1e29;
+  position: relative;
+  background: linear-gradient(to bottom left, #ff7e5f, #feb47b);
   padding: 16px;
   color: #fff;
   display: flex;
   flex-direction: column;
- }
-  
+}
+
 .asideInner {
   flex: 1;
 }
@@ -121,13 +131,18 @@ a{
   flex-direction: column;
   font-weight: bold;
 }
+
 .userName {
   margin-top: 10px;
 }
 
 .logo {
+  background: #282a36;
   border-bottom: 1px solid #424242;
-  padding-bottom: 10px;
+  padding: 15px;
+  border-radius: 30px;
+  position: relative;
+  z-index: 1;
 }
 
 .logoImage {
@@ -137,15 +152,126 @@ a{
 .leaveBtn {
   width: 100%;
   margin-top: 20px;
-} 
+}
+.copyBtn{
+  transition: all ease 0.2s;
+}
+.copyBtn:hover{
+  color:white;
+  background-color: #282a36;
+}
 
 /* Editor section css overwrite */
-.editorWrap{
-  height:100%;
+.editorWrap {
+  height: 100%;
 }
-.CodeMirror{
+
+.CodeMirror {
   height: 627px !important;
   font-size: 15px;
   line-height: 1.6;
-  padding-top:20px;
+  padding-top: 20px;
+}
+
+
+/* animation */
+.circle {
+  position: absolute;
+  /* Position relative to the aside */
+  top: 0;
+  /* Align to the top */
+  left: 0;
+  /* Align to the left */
+  width: 100%;
+  /* Full width of the aside */
+  height: 100%;
+  /* Full height of the aside */
+  overflow: hidden;
+  /* Prevent overflow */
+  pointer-events: none;
+  /* Ensure they don't interfere with clicks */
+}
+
+.circle li {
+  position: absolute;
+  display: block;
+  list-style: none;
+  background-color: rgba(45, 178, 98, 0.6);
+  animation: float linear infinite;
+
+  /* Set the initial size */
+  width: 50px;
+  height: 50px;
+
+  /* Random positioning of squares within the viewport */
+  top: calc(100vh * var(--i) / 10);
+  /* Randomize top */
+  left: calc(100vw * var(--j) / 15);
+  /* Increase divisor for more spread */
+
+  /* Random sizes for variety */
+  width: calc(20px + var(--i) * 7px);
+  height: calc(20px + var(--i) * 7px);
+
+  /* Random animation duration for variety */
+  animation-duration: calc(5s + var(--i) * 5s);
+  /* Speed adjustment */
+}
+
+
+
+.squares {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  /* Use viewport width */
+  height: 100vh;
+  /* Use viewport height */
+  overflow: hidden;
+  z-index: -1;
+  /* Ensure squares stay behind content */
+}
+
+.squares li {
+  position: absolute;
+  display: block;
+  list-style: none;
+  background-color: rgba(45, 178, 98, 0.6);
+  animation: float linear infinite;
+
+  /* Set the initial size */
+  width: 50px;
+  height: 50px;
+
+  /* Random positioning of squares within the viewport */
+  top: calc(100vh * var(--i) / 10);
+  /* Randomize top */
+  left: calc(100vw * var(--j) / 6);
+  /* Increase divisor for more spread */
+
+  /* Random sizes for variety */
+  width: calc(20px + var(--i) * 10px);
+  height: calc(20px + var(--i) * 10px);
+
+  /* Random animation duration for variety */
+  animation-duration: calc(5s + var(--i) * 5s);
+  /* Speed adjustment */
+}
+
+/* Square floating animation */
+@keyframes float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    /* Start position */
+    border-radius: 10px;
+    /* Initial border radius */
+  }
+
+  100% {
+    transform: translateY(-100vh) rotate(360deg);
+    /* Move up completely within viewport */
+    border-radius: 50%;
+    /* Fully rounded corners at the end */
+  }
 }

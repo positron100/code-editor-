@@ -67,12 +67,26 @@ const Home = () => {
           </button>
           <span className="createInfo">
             If you don't have an invite then create &nbsp;
-            <button onClick={createNewRoom}  className="createNewBtn">
+            <button onClick={createNewRoom} className="createNewBtn">
               new room
             </button>
           </span>
         </div>
       </div>
+
+      {/* Floating Circles */}
+      <ul className="squares">
+        {Array.from({ length: 20 }).map((_, idx) => (
+          <li
+            key={idx}
+            style={{
+              "--i": Math.random() * 10 + 1, // For vertical position and size
+              "--j": Math.random() * 7 + 1, // Random horizontal position (adjusted for containment)
+            }}
+          ></li>
+        ))}
+      </ul>
+
       <footer>
         <h4>
           Built by <a href="https://github.com/positron100">Mukul</a>

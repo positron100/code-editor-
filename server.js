@@ -3,11 +3,12 @@ const app = express();
 const http = require("http");
 const ACTIONS = require('./src/Actions');
 const { Server } = require("socket.io");
-
+const path = require('path');
 const server = http.createServer(app);
 
 
 app.use(express.static('build'));
+// all the request are now beign served index.html
 app.use((req,res,next)=>{
   res.sendFile(path.join(__dirname,'build','index.html'));
 })
