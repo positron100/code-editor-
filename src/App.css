@@ -164,6 +164,7 @@ a {
 /* Editor section css overwrite */
 .editorWrap {
   height: 100%;
+  background:#282a36;
 }
 
 .CodeMirror {

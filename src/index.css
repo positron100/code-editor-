@@ -6,6 +6,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  overflow: hidden; /* Prevent scrolling */
+  overflow: hidden; /* Prevent scrolling  */
   background: linear-gradient(to bottom left, #ff7e5f, #feb47b);
 }
