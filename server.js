@@ -6,11 +6,11 @@ const { Server } = require("socket.io");
 const path = require("path");
 const server = http.createServer(app);
 
-app.use(express.static("build"));
+// app.use(express.static("build"));
 // all the request are now beign served index.html
-app.use((req, res, next) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
+// app.use((req, res, next) => {
+//   res.sendFile(path.join(__dirname, "build", "index.html"));
+// });
 // storing it in the memory , can be stored in DataBase for production level app
 // whenever someone joins then a new entry mapping socketId to user will be added
 const userSocketMap = {};
