@@ -28,7 +28,11 @@ function getAllConnectedClients(roomId) {
   );
 }
 
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "https://compile-palace.vercel.app"],
+  },
+});
 io.on("connection", (socket) => {
   // latest joined user socketId will be id for the room
   console.log("socket connected", socket.id);
