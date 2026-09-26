@@ -80,7 +80,8 @@ test("JOIN: every member gets JOINED with the full, correct presence list", asyn
     const a = await ctx.client();
     const b = await ctx.client();
     const first = await join(a, "r1", "alice");
-    assert.deepEqual(first.clients, [{ socketId: a.id, username: "alice" }]);
+    // colorIndex is an additive field (remote-cursor colors); old consumers ignore it.
+    assert.deepEqual(first.clients, [{ socketId: a.id, username: "alice", colorIndex: 0 }]);
     assert.equal(first.username, "alice");
     assert.equal(first.socketId, a.id);
 
@@ -247,7 +248,7 @@ test("JOIN to a different room leaves the previous one", async () => {
     const left = next(a, ACTIONS.DISCONNECTED);
     const moved = await join(b, "r2", "bob");
     assert.deepEqual(await left, { socketId: b.id, username: "bob" });
-    assert.deepEqual(moved.clients, [{ socketId: b.id, username: "bob" }]);
+    assert.deepEqual(moved.clients, [{ socketId: b.id, username: "bob", colorIndex: 0 }]);
   } finally {
     await ctx.stop();
   }
@@ -436,6 +437,34 @@ test("CODE_CHANGE with empty string code is valid, relayed, and snapshotted (cle
   }
 });
 
+test("clearing a non-empty document propagates each step and a rejoiner gets the empty snapshot, not old text", async () => {
+  const ctx = await start();
+  try {
+    const a = await ctx.client();
+    const b = await ctx.client();
+    await join(a, "r1", "alice");
+    await join(b, "r1", "bob");
+
+    // non-empty -> "" -> non-empty -> "" : every step relayed and snapshotted.
+    for (const code of ["Hello World", "", "New code", ""]) {
+      const got = next(b, ACTIONS.CODE_CHANGE);
+      a.emit(ACTIONS.CODE_CHANGE, { roomId: "r1", code });
+      assert.deepEqual(await got, { code });
+      assert.equal(ctx.snapshots.get("room:r1"), code);
+    }
+
+    // B leaves and rejoins while A keeps the room open: the snapshot exists and is "".
+    const left = next(a, ACTIONS.DISCONNECTED);
+    b.emit(ACTIONS.LEAVE, { roomId: "r1" });
+    await left;
+    const snap = next(b, ACTIONS.CODE_CHANGE);
+    await join(b, "r1", "bob");
+    assert.deepEqual(await snap, { code: "" });
+  } finally {
+    await ctx.stop();
+  }
+});
+
 test("re-JOIN in the same room with a new username updates presence consistently for everyone", async () => {
   const ctx = await start();
   try {
@@ -516,4 +545,108 @@ test("createShutdown: forces exit(1) if io.close never calls back", async () => 
   shutdown("SIGTERM");
   await new Promise((r) => setTimeout(r, 80));
   assert.deepEqual(exits, [1]);
+});
+
+test("two users may share a display name: two presence entries; renaming one leaves the other's untouched", async () => {
+  const ctx = await start();
+  try {
+    const a = await ctx.client();
+    const b = await ctx.client();
+    await join(a, "r-name", "Same Name");
+    const joinedB = await join(b, "r-name", "Same Name");
+    assert.equal(joinedB.clients.length, 2);
+    assert.deepEqual(joinedB.clients.map((c) => c.username), ["Same Name", "Same Name"]);
+    assert.notEqual(joinedB.clients[0].socketId, joinedB.clients[1].socketId);
+
+    const renamed = next(a, ACTIONS.JOINED);
+    b.emit(ACTIONS.JOIN, { roomId: "r-name", username: "Test User" });
+    const payload = await renamed;
+    const byId = Object.fromEntries(payload.clients.map((c) => [c.socketId, c.username]));
+    assert.equal(payload.clients.length, 2);
+    assert.equal(byId[a.id], "Same Name");
+    assert.equal(byId[b.id], "Test User");
+  } finally {
+    await ctx.stop();
+  }
+});
+
+test("CODE_CHANGE relays multi-line code byte-for-byte (LF, CRLF, tabs, blank lines, trailing newline, unicode)", async () => {
+  const ctx = await start();
+  try {
+    const a = await ctx.client();
+    const b = await ctx.client();
+    await join(a, "r-ml", "A");
+    await join(b, "r-ml", "B");
+    const docs = ["line 1\n\nline 2\nline 3", "a\r\nb\r\n", "\tindented\n  two spaces\n", "trailing\n", "\n\n", "unicode \u2713 \u00e9\nnext"];
+    for (const code of docs) {
+      const got = next(b, ACTIONS.CODE_CHANGE);
+      a.emit(ACTIONS.CODE_CHANGE, { roomId: "r-ml", code });
+      assert.deepEqual(await got, { code });
+      assert.equal(ctx.snapshots.get("room:r-ml"), code);
+    }
+  } finally {
+    await ctx.stop();
+  }
+});
+
+test("a joiner that has not sent code-change never overwrites the room snapshot or the members' documents", async () => {
+  const ctx = await start();
+  try {
+    const a = await ctx.client();
+    const b = await ctx.client();
+    await join(a, "r-join", "A");
+    await join(b, "r-join", "B");
+    const seen = next(b, ACTIONS.CODE_CHANGE);
+    a.emit(ACTIONS.CODE_CHANGE, { roomId: "r-join", code: "DOC\nsecond line" });
+    await seen;
+
+    const c = await ctx.client();
+    const aQuiet = never(a, ACTIONS.CODE_CHANGE, 400);
+    const bQuiet = never(b, ACTIONS.CODE_CHANGE, 400);
+    const replay = next(c, ACTIONS.CODE_CHANGE);
+    await join(c, "r-join", "C");
+    // C receives the current document; nobody else receives anything on C's behalf.
+    assert.deepEqual(await replay, { code: "DOC\nsecond line" });
+    assert.equal(await aQuiet, true);
+    assert.equal(await bQuiet, true);
+    assert.equal(ctx.snapshots.get("room:r-join"), "DOC\nsecond line");
+  } finally {
+    await ctx.stop();
+  }
+});
+
+test("a member leaving or disconnecting does not corrupt the snapshot while others remain; it is dropped only when the room empties", async () => {
+  const ctx = await start();
+  try {
+    const a = await ctx.client();
+    const b = await ctx.client();
+    const c = await ctx.client();
+    for (const [s, n] of [[a, "A"], [b, "B"], [c, "C"]]) await join(s, "r-leave", n);
+    const seen = next(b, ACTIONS.CODE_CHANGE);
+    a.emit(ACTIONS.CODE_CHANGE, { roomId: "r-leave", code: "KEEP ME" });
+    await seen;
+
+    const gone1 = next(a, ACTIONS.DISCONNECTED);
+    c.close(); // abrupt: tab closed
+    await gone1;
+    assert.equal(ctx.snapshots.get("room:r-leave"), "KEEP ME");
+
+    const gone2 = next(a, ACTIONS.DISCONNECTED);
+    b.emit(ACTIONS.LEAVE, { roomId: "r-leave" }); // explicit leave
+    await gone2;
+    assert.equal(ctx.snapshots.get("room:r-leave"), "KEEP ME");
+
+    const d = await ctx.client();
+    const replay = next(d, ACTIONS.CODE_CHANGE);
+    await join(d, "r-leave", "D");
+    assert.deepEqual(await replay, { code: "KEEP ME" });
+
+    a.close();
+    d.close();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(ctx.snapshots.has("room:r-leave"), false);
+    assert.deepEqual(roomEntries(ctx), []);
+  } finally {
+    await ctx.stop();
+  }
 });

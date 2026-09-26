@@ -15,6 +15,15 @@ const MAX_CODE_CHARS = 400000;
 const RATE_WINDOW_MS = 5000;
 const RATE_MAX = 60;
 const MAX_LOGGED_REJECTS = 5;
+// Remote-cursor colors: the server hands each room member the lowest unused
+// palette index so every client agrees and no two members share a color. The
+// frontend palette (--cp-remote-cursor-0..N-1 in EditorPage.css and
+// CURSOR_PALETTE_SIZE in useRemoteCursors.ts) must stay this size.
+const PALETTE_SIZE = 12;
+const MAX_CURSOR_COORD = 1000000;
+// Cursor moves are far chattier than the ~2/s debounced code-change, and get
+// their own bucket so they can never eat the code-change budget.
+const CURSOR_RATE_MAX = 200;
 
 function log(level, msg, fields = {}) {
   const line = JSON.stringify({ time: new Date().toISOString(), level, msg, ...fields });
@@ -63,11 +72,26 @@ function createServer({ allowedOrigins = allowedOriginsFromEnv() } = {}) {
     log("warn", "connection_error", { code: err.code, message: err.message });
   });
 
+  // colorIndex/cursor are additive: older frontends ignore the extra fields.
   const clientsIn = (name) =>
-    Array.from(io.sockets.adapter.rooms.get(name) || [], (socketId) => ({
-      socketId,
-      username: io.sockets.sockets.get(socketId)?.data.username,
-    }));
+    Array.from(io.sockets.adapter.rooms.get(name) || [], (socketId) => {
+      const d = io.sockets.sockets.get(socketId)?.data ?? {};
+      return { socketId, username: d.username, colorIndex: d.colorIndex, ...(d.cursor ? { cursor: d.cursor } : {}) };
+    });
+
+  // Lowest palette index no current member holds (leaving frees it implicitly,
+  // since "in use" is derived from live members). Past PALETTE_SIZE members
+  // colors repeat deterministically instead of failing.
+  function nextColorIndex(name) {
+    const members = io.sockets.adapter.rooms.get(name) || new Set();
+    const used = new Set();
+    for (const id of members) {
+      const c = io.sockets.sockets.get(id)?.data.colorIndex;
+      if (c !== undefined) used.add(c);
+    }
+    for (let i = 0; i < PALETTE_SIZE; i++) if (!used.has(i)) return i;
+    return members.size % PALETTE_SIZE;
+  }
 
   function reject(socket, event, code) {
     socket.emit(ERROR_EVENT, { event, code });
@@ -75,16 +99,16 @@ function createServer({ allowedOrigins = allowedOriginsFromEnv() } = {}) {
     if (n <= MAX_LOGGED_REJECTS) log("warn", "rejected", { event, code, socketId: socket.id });
   }
 
-  function rateLimited(socket) {
+  function rateLimited(socket, bucket = "rate", max = RATE_MAX, event = ACTIONS.CODE_CHANGE) {
     const now = Date.now();
-    const r = (socket.data.rate ||= { start: now, count: 0 });
+    const r = (socket.data[bucket] ||= { start: now, count: 0 });
     if (now - r.start > RATE_WINDOW_MS) {
       r.start = now;
       r.count = 0;
     }
     r.count += 1;
-    if (r.count === RATE_MAX + 1) reject(socket, ACTIONS.CODE_CHANGE, "rate_limited");
-    return r.count > RATE_MAX;
+    if (r.count === max + 1) reject(socket, event, "rate_limited");
+    return r.count > max;
   }
 
   function leaveRoom(socket) {
@@ -92,6 +116,8 @@ function createServer({ allowedOrigins = allowedOriginsFromEnv() } = {}) {
     if (!roomId) return;
     const name = roomName(roomId);
     socket.data.roomId = undefined;
+    socket.data.cursor = undefined;
+    socket.data.colorIndex = undefined;
     socket.leave(name);
     socket.to(name).emit(ACTIONS.DISCONNECTED, { socketId: socket.id, username });
     if (!io.sockets.adapter.rooms.has(name)) snapshots.delete(name);
@@ -124,7 +150,10 @@ function createServer({ allowedOrigins = allowedOriginsFromEnv() } = {}) {
           // sender only so peers don't get a duplicate "joined" toast.
           return socket.emit(ACTIONS.JOINED, { clients: clientsIn(name), username, socketId: socket.id });
         }
-        if (!sameRoom) leaveRoom(socket);
+        if (!sameRoom) {
+          leaveRoom(socket);
+          socket.data.colorIndex = nextColorIndex(name);
+        }
         socket.data.roomId = roomId;
         socket.data.username = username;
         socket.join(name);
@@ -163,6 +192,21 @@ function createServer({ allowedOrigins = allowedOriginsFromEnv() } = {}) {
           return reject(socket, ACTIONS.SYNC_CODE, "invalid_target");
         }
         target.emit(ACTIONS.CODE_CHANGE, { code });
+      })
+    );
+
+    // Payload is exactly { line, ch }. Sender = this socket, room = the room the
+    // server put it in — anything else the client sends (roomId, socketId,
+    // username, color) is ignored, so nobody can move another user's cursor.
+    socket.on(
+      ACTIONS.CURSOR_CHANGE,
+      guard(socket, ACTIONS.CURSOR_CHANGE, ({ line, ch }) => {
+        if (rateLimited(socket, "cursorRate", CURSOR_RATE_MAX, ACTIONS.CURSOR_CHANGE)) return;
+        const valid = (n) => Number.isSafeInteger(n) && n >= 0 && n <= MAX_CURSOR_COORD;
+        if (!valid(line) || !valid(ch)) return reject(socket, ACTIONS.CURSOR_CHANGE, "invalid_payload");
+        if (!socket.data.roomId) return reject(socket, ACTIONS.CURSOR_CHANGE, "not_in_room");
+        socket.data.cursor = { line, ch };
+        socket.to(roomName(socket.data.roomId)).emit(ACTIONS.CURSOR_CHANGE, { socketId: socket.id, line, ch });
       })
     );
 
